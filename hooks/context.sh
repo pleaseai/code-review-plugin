@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Read gemini-extension.json to get contextFileName
+# Read plugin.json and gemini-extension.json to get contextFileName
 EXTENSION_JSON="${CLAUDE_PLUGIN_ROOT}/gemini-extension.json"
 PLUGIN_JSON="${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
 
@@ -15,28 +15,38 @@ if [ -f "$PLUGIN_JSON" ]; then
     fi
 fi
 
-if [ -f "$EXTENSION_JSON" ]; then
-    # Extract contextFileName using jq or grep/sed
+CONTEXT_FILE=""
+
+# First, try to read from plugin.json (Claude Code plugin format)
+if [ -f "$PLUGIN_JSON" ]; then
+    if command -v jq &> /dev/null; then
+        CONTEXT_FILE=$(jq -r '.contextFileName // empty' "$PLUGIN_JSON")
+    else
+        CONTEXT_FILE=$(grep -oP '"contextFileName"\s*:\s*"\K[^"]+' "$PLUGIN_JSON" || true)
+    fi
+fi
+
+# Fallback to gemini-extension.json if not found in plugin.json
+if [ -z "$CONTEXT_FILE" ] && [ -f "$EXTENSION_JSON" ]; then
     if command -v jq &> /dev/null; then
         CONTEXT_FILE=$(jq -r '.contextFileName // empty' "$EXTENSION_JSON")
     else
-        # Fallback to grep if jq is not available
         CONTEXT_FILE=$(grep -oP '"contextFileName"\s*:\s*"\K[^"]+' "$EXTENSION_JSON" || true)
     fi
+fi
 
-    # If contextFileName exists, read and output the file
-    if [ -n "$CONTEXT_FILE" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/${CONTEXT_FILE}" ]; then
-        echo "📦 Loading context from plugin: ${PLUGIN_NAME} (${CONTEXT_FILE})" >&2
+# If contextFileName exists, read and output the file
+if [ -n "$CONTEXT_FILE" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/${CONTEXT_FILE}" ]; then
+    echo "📦 Loading context from plugin: ${PLUGIN_NAME} (${CONTEXT_FILE})" >&2
 
-        # Read the context file content
-        CONTEXT_CONTENT=$(cat "${CLAUDE_PLUGIN_ROOT}/${CONTEXT_FILE}")
+    # Read the context file content
+    CONTEXT_CONTENT=$(cat "${CLAUDE_PLUGIN_ROOT}/${CONTEXT_FILE}")
 
-        # Output as JSON with additionalContext
-        jq -n --arg context "$CONTEXT_CONTENT" '{
-          "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
-            "additionalContext": $context
-          }
-        }'
-    fi
+    # Output as JSON with additionalContext
+    jq -n --arg context "$CONTEXT_CONTENT" '{
+      "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": $context
+      }
+    }'
 fi
