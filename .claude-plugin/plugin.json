@@ -2,6 +2,10 @@
   "name": "code-review",
   "version": "0.1.0",
   "description": "Code review plugin for Claude Code",
+  "author": {
+    "name": "Google",
+    "url": "https://github.com/gemini-cli-extensions"
+  },
   "contextFileName": "GEMINI.md",
   "commands": ["./commands"],
   "hooks": {
