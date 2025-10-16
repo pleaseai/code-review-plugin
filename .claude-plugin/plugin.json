@@ -6,20 +6,5 @@
     "name": "Google",
     "url": "https://github.com/gemini-cli-extensions"
   },
-  "contextFileName": "GEMINI.md",
-  "commands": ["./commands"],
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/context.sh",
-            "timeout": 10
-          }
-        ]
-      }
-    ]
-  }
+  "commands": ["./commands"]
 }
